@@ -9,7 +9,7 @@ from collections import Counter
 from itertools import tee, izip
 import argparse
 
-__version__ = "1.9.0"
+__version__ = "1.9.1"
 
 PTRN = r'<DT><A HREF="(.+?://.+?)"'
 
