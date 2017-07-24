@@ -89,30 +89,32 @@ def blank_empty_folder(bookmarks, indices):
 def delete_empty_folders_gen(bookmarks):
     '''TODO'''
     START_TAG, END_TAG = '<DL><p>','</DL><p>'
+    FOLDER_PTRN = "<DT><H3.+?</H3>"
     indices = [i for i,v in enumerate(pairwise([x.strip() for x in bookmarks
                                                 if x.strip() > ''])) 
                if ''.join(v) == ''.join([START_TAG, END_TAG])]
     for ix in indices:
-        indices_tpl = (0,1,2)
-        if ((bookmarks[ix+1].strip() == START_TAG)
-            & (bookmarks[ix+2].strip() == END_TAG)):
-            print 'FF-like at index {} - folder {}, empty body {} {} '\
-                  .format(ix,
-                          bookmarks[ix+0].strip(),
-                          bookmarks[ix+1].strip(),
-                          bookmarks[ix+2].strip())
-            blank_empty_folder(bookmarks, indices_tpl)
+        offset_tpl = (0,1,2)
+        if ((bookmarks[ix+offset_tpl[1]].strip() == START_TAG)
+            & (bookmarks[ix+offset_tpl[2]].strip() == END_TAG)):
+            if not re.search(FOLDER_PTRN, bookmarks[ix+offset_tpl[0]]):
+                msg = 'Folder header split at index {}, containing {}'.format(ix, bookmarks[ix+offset_tpl[0]].strip())
+                raise ValueError(msg)
+            else:
+                print 'FF-like at index {} - folder {}'\
+                      .format(ix, bookmarks[ix+offset_tpl[0]].strip())
+            blank_empty_folder(bookmarks, [ix+x for x in offset_tpl])
         elif ((bookmarks[ix+0].strip() == START_TAG)
             & (bookmarks[ix+1].strip() == END_TAG)):
-            print 'CH-like at index {} - folder {}, empty body {} {} '\
-                  .format(ix,
-                          bookmarks[ix-1].strip(),
-                          bookmarks[ix+0].strip(),
-                          bookmarks[ix+1].strip())
-            # remove header of empty folder <DT><H3 ADD_DATE="1500646543" LAST_MODIFIED="1500646582">test1</H3>
-            bookmarks[ix-1] = ''
-            # remove empty folder '<DL><p>','</DL><p>'
-            bookmarks[ix+0], bookmarks[ix+1] = '',''
+            offset_tpl = [x-1 for x in offset_tpl]
+            print offset_tpl
+            if not re.search(FOLDER_PTRN, bookmarks[ix+offset_tpl[0]]):
+                msg = 'Folder header split at index {}, containing {}'.format(ix, bookmarks[ix+offset_tpl[0]].strip())
+                raise ValueError(msg)
+            else:
+                print 'CH-like at index {} - folder {}'\
+                      .format(ix, bookmarks[ix+offset_tpl[0]].strip())
+            blank_empty_folder(bookmarks, [ix+x for x in offset_tpl])
         else:
             msg = 'Cannot re-bind to empty folder at index {}'.format(ix)
             raise ValueError(msg)
