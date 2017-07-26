@@ -9,7 +9,7 @@ from collections import Counter
 from itertools import tee, izip
 import argparse
 
-__version__ = "1.9.2"
+__version__ = "1.9.3"
 
 PTRN = r'<DT><A HREF="(.+?://.+?)"'
 
@@ -95,31 +95,24 @@ def delete_empty_folders_gen(bookmarks):
                if ''.join(v) == ''.join([START_TAG, END_TAG])]
     for ix in indices:
         offset_tpl = (0,1,2)
-        if ((bookmarks[ix+offset_tpl[1]].strip() == START_TAG)
-            & (bookmarks[ix+offset_tpl[2]].strip() == END_TAG)):
-            if not re.search(FOLDER_PTRN, bookmarks[ix+offset_tpl[0]]):
-                #handle split folder title
-                msg = 'Folder header split at index {}, containing {}'.format(ix, bookmarks[ix+offset_tpl[0]].strip())
-                raise ValueError(msg)
+        for shift in (0,-1):
+            if shift == 0: bm_type = 'FF'
+            elif shift == -1: bm_type = 'CH'
             else:
-                print 'FF-like at index {} - folder {}'\
-                      .format(ix, bookmarks[ix+offset_tpl[0]].strip())
-            blank_empty_folder(bookmarks, [ix+x for x in offset_tpl])
-        elif ((bookmarks[ix+0].strip() == START_TAG)
-            & (bookmarks[ix+1].strip() == END_TAG)):
-            offset_tpl = [x-1 for x in offset_tpl]
-            print offset_tpl
-            if not re.search(FOLDER_PTRN, bookmarks[ix+offset_tpl[0]]):
-                #handle split folder title
-                msg = 'Folder header split at index {}, containing {}'.format(ix, bookmarks[ix+offset_tpl[0]].strip())
-                raise ValueError(msg)
+                raise
+            if ((bookmarks[ix+offset_tpl[1]+shift].strip() == START_TAG)
+                & (bookmarks[ix+offset_tpl[2]+shift].strip() == END_TAG)):
+                if not re.search(FOLDER_PTRN, bookmarks[ix+offset_tpl[0]+shift]):
+                    #handle split folder title
+                    msg = 'Folder header split at index {}, containing {}'.format(ix, bookmarks[ix+offset_tpl[0]+shift].strip())
+                    raise ValueError(msg)
+                else:
+                    print '{}-like at index {} - folder {}'\
+                          .format(bm_type, ix, bookmarks[ix+offset_tpl[0]+shift].strip())
+                blank_empty_folder(bookmarks, [ix+x for x in offset_tpl])
             else:
-                print 'CH-like at index {} - folder {}'\
-                      .format(ix, bookmarks[ix+offset_tpl[0]].strip())
-            blank_empty_folder(bookmarks, [ix+x for x in offset_tpl])
-        else:
-            msg = 'Cannot re-bind to empty folder at index {}'.format(ix)
-            raise ValueError(msg)
+                msg = 'Cannot re-bind to empty folder at index {}'.format(ix)
+                raise ValueError(msg)
     return [x for x in bookmarks if x != '']
 
 def main(argv):
