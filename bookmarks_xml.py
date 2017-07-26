@@ -9,7 +9,7 @@ from collections import Counter
 from itertools import tee, izip
 import argparse
 
-__version__ = "1.9.1"
+__version__ = "1.9.2"
 
 PTRN = r'<DT><A HREF="(.+?://.+?)"'
 
@@ -98,6 +98,7 @@ def delete_empty_folders_gen(bookmarks):
         if ((bookmarks[ix+offset_tpl[1]].strip() == START_TAG)
             & (bookmarks[ix+offset_tpl[2]].strip() == END_TAG)):
             if not re.search(FOLDER_PTRN, bookmarks[ix+offset_tpl[0]]):
+                #handle split folder title
                 msg = 'Folder header split at index {}, containing {}'.format(ix, bookmarks[ix+offset_tpl[0]].strip())
                 raise ValueError(msg)
             else:
@@ -109,6 +110,7 @@ def delete_empty_folders_gen(bookmarks):
             offset_tpl = [x-1 for x in offset_tpl]
             print offset_tpl
             if not re.search(FOLDER_PTRN, bookmarks[ix+offset_tpl[0]]):
+                #handle split folder title
                 msg = 'Folder header split at index {}, containing {}'.format(ix, bookmarks[ix+offset_tpl[0]].strip())
                 raise ValueError(msg)
             else:
@@ -124,6 +126,7 @@ def main(argv):
     ''''''
     # TODO - ask around whether argument parsing 
     # should be inside or outside the main() function
+    SAVE_PARTIAL_DEDUP = False
     parser = argparse.ArgumentParser(
         description='Deduplicate bookmark HTML file.')
     parser.add_argument('infname',
@@ -150,7 +153,7 @@ def main(argv):
         delete_empty_folders = delete_empty_folders_ff
         print 'SRC BROWSER set to [{}]'.format(args.browser)
     else:
-        delete_empty_folders = delete_empty_folders_gen
+        delete_empty_folders = delete_empty_folders_gen_NEW
         print 'SRC BROWSER {}'.format('autodetected')
     #
     # ingesting input HTML file
@@ -174,8 +177,9 @@ def main(argv):
     print 'DEDUPED: {} unique URLs'.format(len(urls_list_deduped))
     #
     # saving output with deduplicated URLs
-    with open(INPUT + '.deduped.html', 'w') as fout:
-        fout.writelines(bm)
+    if SAVE_PARTIAL_DEDUP:
+        with open(INPUT + '.deduped.html', 'w') as fout:
+            fout.writelines(bm)
     #
     # deleting empty bookmark folders
     bm = delete_empty_folders_gen(bm)
