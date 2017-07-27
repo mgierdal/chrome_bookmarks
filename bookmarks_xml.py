@@ -9,9 +9,11 @@ from collections import Counter
 from itertools import tee, izip
 import argparse
 
-__version__ = "1.9.3"
+__version__ = "1.9.4"
 
 PTRN = r'<DT><A HREF="(.+?://.+?)"'
+EMPTY_LINE = ''
+EMPTY_LINE = '*****'
 
 def get_url_counter(bookmark_file_list, duped=False):
     '''duped - if True, only multiplicated URLs are counted (default=False)'''
@@ -56,7 +58,7 @@ def delete_empty_folders_chrome(bookmarks):
         # remove header of empty folder <DT><H3 ADD_DATE="1500646543" LAST_MODIFIED="1500646582">test1</H3>
         bookmarks[ix-1] = ''
         # remove empty folder '<DL><p>','</DL><p>'
-        bookmarks[ix+0], bookmarks[ix+1] = '',''
+        bookmarks[ix+0], bookmarks[ix+1] = EMPTY_LINE, EMPTY_LINE
         
     return [x for x in bookmarks if x != '']
 
@@ -90,29 +92,47 @@ def delete_empty_folders_gen(bookmarks):
     '''TODO'''
     START_TAG, END_TAG = '<DL><p>','</DL><p>'
     FOLDER_PTRN = "<DT><H3.+?</H3>"
-    indices = [i for i,v in enumerate(pairwise([x.strip() for x in bookmarks
+    FOLDER_HEAD_PTRN = "<DT><H3"
+    FOLDER_TAIL_PTRN = "</H3>"
+    OFFSET_TPL = (0,1,2)
+    empty_folder_body_indices = [i for i,v in enumerate(pairwise([x.strip() for x in bookmarks
                                                 if x.strip() > ''])) 
                if ''.join(v) == ''.join([START_TAG, END_TAG])]
-    for ix in indices:
-        offset_tpl = (0,1,2)
-        for shift in (0,-1):
-            if shift == 0: bm_type = 'FF'
-            elif shift == -1: bm_type = 'CH'
-            else:
-                raise
-            if ((bookmarks[ix+offset_tpl[1]+shift].strip() == START_TAG)
-                & (bookmarks[ix+offset_tpl[2]+shift].strip() == END_TAG)):
-                if not re.search(FOLDER_PTRN, bookmarks[ix+offset_tpl[0]+shift]):
-                    #handle split folder title
-                    msg = 'Folder header split at index {}, containing {}'.format(ix, bookmarks[ix+offset_tpl[0]+shift].strip())
-                    raise ValueError(msg)
+    for ix in empty_folder_body_indices:
+        #for shift, bm_type in zip((0,-1,), ('FF','CH',)):
+        for shift, bm_type in zip((-1,), ('CH',)):
+        #for shift, bm_type in zip((0,), ('FF',)):
+            offset = [x+shift for x in OFFSET_TPL]
+            print offset, bm_type
+            if ((bookmarks[ix+offset[1]].strip() == START_TAG)
+                & (bookmarks[ix+offset[2]].strip() == END_TAG)):
+                print offset[1], bookmarks[ix+offset[1]].strip()
+                print offset[2], bookmarks[ix+offset[2]].strip()
+                if re.search(FOLDER_PTRN, bookmarks[ix+offset[0]]):
+                    print offset[0], bookmarks[ix+offset[0]].strip()
                 else:
-                    print '{}-like at index {} - folder {}'\
-                          .format(bm_type, ix, bookmarks[ix+offset_tpl[0]+shift].strip())
-                blank_empty_folder(bookmarks, [ix+x for x in offset_tpl])
+                    #handle split folder title
+                    if re.search(FOLDER_TAIL_PTRN, bookmarks[ix+offset[0]]):
+                        print offset[0], bookmarks[ix+offset[0]]
+                        bookmarks[ix+offset[0]] = ''
+                        if re.search(FOLDER_HEAD_PTRN, bookmarks[ix+offset[0] - 1]):
+                            print offset[0] - 1, bookmarks[ix+offset[0] - 1]
+                            bookmarks[ix+offset[0] - 1] = EMPTY_LINE
+                        elif re.search(FOLDER_HEAD_PTRN, bookmarks[ix+offset[0] - 2]):
+                            print offset[0] - 2, bookmarks[ix+offset[0] - 2]
+                            print offset[0] - 1, bookmarks[ix+offset[0] - 1]
+                            bookmarks[ix+offset[0] - 2] = EMPTY_LINE
+                            bookmarks[ix+offset[0] - 1] = EMPTY_LINE
+                        else: 
+                            msg = 'Folder header split at index {}, containing {}'.format(
+                                ix, bookmarks[ix+offset[0]].strip())
+                            raise ValueError(msg)
+                blank_empty_folder(bookmarks, [ix+x+shift for x in OFFSET_TPL])
             else:
-                msg = 'Cannot re-bind to empty folder at index {}'.format(ix)
+                msg = 'Cannot re-bind to empty folder at index {}, offsets {}, shift {}'.format(
+                    ix, OFFSET_TPL, shift)
                 raise ValueError(msg)
+        print '-' * 20
     return [x for x in bookmarks if x != '']
 
 def main(argv):
@@ -146,7 +166,7 @@ def main(argv):
         delete_empty_folders = delete_empty_folders_ff
         print 'SRC BROWSER set to [{}]'.format(args.browser)
     else:
-        delete_empty_folders = delete_empty_folders_gen_NEW
+        delete_empty_folders = delete_empty_folders_gen
         print 'SRC BROWSER {}'.format('autodetected')
     #
     # ingesting input HTML file
