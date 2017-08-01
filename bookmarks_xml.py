@@ -9,11 +9,11 @@ from collections import Counter
 from itertools import tee, izip
 import argparse
 
-__version__ = "1.9.4"
+__version__ = "1.9.5"
 
 PTRN = r'<DT><A HREF="(.+?://.+?)"'
 EMPTY_LINE = ''
-EMPTY_LINE = '*****'
+#EMPTY_LINE = '*****'
 
 def get_url_counter(bookmark_file_list, duped=False):
     '''duped - if True, only multiplicated URLs are counted (default=False)'''
@@ -153,6 +153,9 @@ def main(argv):
     parser.add_argument("-v", "--verbose",
                         action='store_true',
                         help="verbosity on")
+    parser.add_argument("-l", "--links",
+                        action='store_true',
+                        help="produce file with URL list")
     args = parser.parse_args()
     print 'Arguments:', args
     INPUT = args.infname
@@ -191,7 +194,9 @@ def main(argv):
     #
     # saving output with deduplicated URLs
     if SAVE_PARTIAL_DEDUP:
-        with open(INPUT + '.deduped.html', 'w') as fout:
+        outfname, ext = os.path.splitext(INPUT)
+        outfname = '_'.join([outfname, 'partial']) + ext
+        with open(outfname, 'w') as fout:
             fout.writelines(bm)
     #
     # deleting empty bookmark folders
@@ -202,8 +207,17 @@ def main(argv):
     print 'CLEANED: {} unique URLs'.format(len(urls_list_cleaned))
     #
     # saving completely cleaned output
-    with open(INPUT + '.deduped.html' + '.deduped.html', 'w') as fout:
+    outfname, ext = os.path.splitext(INPUT)
+    outfname = '_'.join([outfname, 'deduped']) + ext
+    with open(outfname, 'w') as fout:
         fout.writelines(bm)
+    #
+    # saving deduped list of URLs
+    if args.links:
+        outfname, ext = os.path.splitext(INPUT)
+        outfname = '_'.join([outfname, 'urls']) + '.txt'
+        with open(outfname, 'w') as fout:
+            fout.writelines([x + '\n' for x in urls_list_cleaned])
     #
     # final diagnostics
     assert urls_list_input == urls_list_deduped, \
