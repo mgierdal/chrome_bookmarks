@@ -9,7 +9,7 @@ from collections import Counter
 from itertools import tee, izip
 import argparse
 
-__version__ = "1.9.5"
+__version__ = "1.9.6"
 
 PTRN = r'<DT><A HREF="(.+?://.+?)"'
 EMPTY_LINE = ''
@@ -43,18 +43,19 @@ def pairwise(iterable):
     next(b, None)
     return izip(a, b)
 
-def delete_empty_folders_chrome(bookmarks):
+def delete_empty_folders_chrome(bookmarks, verbose=False):
     '''TODO'''
     indices = [i for i,v in enumerate(pairwise([x.strip() for x in bookmarks
                                                 if x.strip() > ''])) 
                if ''.join(v) == '<DL><p></DL><p>']
 
     for ix in indices:
-        print 'CH at index {} - folder {}, empty body {} {} '\
-              .format(ix,
-                      bookmarks[ix-1].strip(),
-                      bookmarks[ix+0].strip(),
-                      bookmarks[ix+1].strip())
+        if verbose:
+            print 'CH at index {} - folder {}, empty body {} {} '\
+                  .format(ix,
+                          bookmarks[ix-1].strip(),
+                          bookmarks[ix+0].strip(),
+                          bookmarks[ix+1].strip())
         # remove header of empty folder <DT><H3 ADD_DATE="1500646543" LAST_MODIFIED="1500646582">test1</H3>
         bookmarks[ix-1] = ''
         # remove empty folder '<DL><p>','</DL><p>'
@@ -62,18 +63,19 @@ def delete_empty_folders_chrome(bookmarks):
         
     return [x for x in bookmarks if x != '']
 
-def delete_empty_folders_ff(bookmarks):
+def delete_empty_folders_ff(bookmarks, verbose=False):
     '''TODO'''
     indices = [i for i,v in enumerate(pairwise([x.strip() for x in bookmarks
                                                 if x.strip() > ''])) 
                if ''.join(v) == '<DL><p></DL><p>']
 
     for ix in indices:
-        print 'FF at index {} - folder {}, empty body {} {} '\
-              .format(ix,
-                      bookmarks[ix+0].strip(),
-                      bookmarks[ix+1].strip(),
-                      bookmarks[ix+2].strip())
+        if verbose:
+            print 'FF at index {} - folder {}, empty body {} {} '\
+                  .format(ix,
+                          bookmarks[ix+0].strip(),
+                          bookmarks[ix+1].strip(),
+                          bookmarks[ix+2].strip())
         # remove header of empty folder <DT><H3 ADD_DATE="1500646543" LAST_MODIFIED="1500646582">test1</H3>
         bookmarks[ix+0] = ''
         # remove empty folder '<DL><p>','</DL><p>'
@@ -88,7 +90,7 @@ def blank_empty_folder(bookmarks, indices):
     # remove empty folder '<DL><p>','</DL><p>'
     bookmarks[indices[1]], bookmarks[indices[2]] = '',''
     
-def delete_empty_folders_gen(bookmarks):
+def delete_empty_folders_gen(bookmarks, verbose=False):
     '''TODO'''
     START_TAG, END_TAG = '<DL><p>','</DL><p>'
     FOLDER_PTRN = "<DT><H3.+?</H3>"
@@ -103,24 +105,26 @@ def delete_empty_folders_gen(bookmarks):
         for shift, bm_type in zip((-1,), ('CH',)):
         #for shift, bm_type in zip((0,), ('FF',)):
             offset = [x+shift for x in OFFSET_TPL]
-            print offset, bm_type
+            if verbose: print offset, bm_type
             if ((bookmarks[ix+offset[1]].strip() == START_TAG)
                 & (bookmarks[ix+offset[2]].strip() == END_TAG)):
-                print offset[1], bookmarks[ix+offset[1]].strip()
-                print offset[2], bookmarks[ix+offset[2]].strip()
+                if verbose:
+                    print offset[1], bookmarks[ix+offset[1]].strip()
+                    print offset[2], bookmarks[ix+offset[2]].strip()
                 if re.search(FOLDER_PTRN, bookmarks[ix+offset[0]]):
-                    print offset[0], bookmarks[ix+offset[0]].strip()
+                    if verbose: print offset[0], bookmarks[ix+offset[0]].strip()
                 else:
                     #handle split folder title
                     if re.search(FOLDER_TAIL_PTRN, bookmarks[ix+offset[0]]):
                         print offset[0], bookmarks[ix+offset[0]]
                         bookmarks[ix+offset[0]] = ''
                         if re.search(FOLDER_HEAD_PTRN, bookmarks[ix+offset[0] - 1]):
-                            print offset[0] - 1, bookmarks[ix+offset[0] - 1]
+                            if verbose: print offset[0] - 1, bookmarks[ix+offset[0] - 1]
                             bookmarks[ix+offset[0] - 1] = EMPTY_LINE
                         elif re.search(FOLDER_HEAD_PTRN, bookmarks[ix+offset[0] - 2]):
-                            print offset[0] - 2, bookmarks[ix+offset[0] - 2]
-                            print offset[0] - 1, bookmarks[ix+offset[0] - 1]
+                            if verbose:
+                                print offset[0] - 2, bookmarks[ix+offset[0] - 2]
+                                print offset[0] - 1, bookmarks[ix+offset[0] - 1]
                             bookmarks[ix+offset[0] - 2] = EMPTY_LINE
                             bookmarks[ix+offset[0] - 1] = EMPTY_LINE
                         else: 
@@ -132,7 +136,7 @@ def delete_empty_folders_gen(bookmarks):
                 msg = 'Cannot re-bind to empty folder at index {}, offsets {}, shift {}'.format(
                     ix, OFFSET_TPL, shift)
                 raise ValueError(msg)
-        print '-' * 20
+        if verbose: print '-' * 20
     return [x for x in bookmarks if x != '']
 
 def main(argv):
@@ -163,25 +167,25 @@ def main(argv):
     if args.browser == 'ch':
         global delete_empty_folders_chrome
         delete_empty_folders = delete_empty_folders_chrome
-        print 'SRC BROWSER set to [{}]'.format(args.browser)
+        if args.verbose: print 'SRC BROWSER set to [{}]'.format(args.browser)
     elif args.browser == 'ff':
         global delete_empty_folders_ff
         delete_empty_folders = delete_empty_folders_ff
-        print 'SRC BROWSER set to [{}]'.format(args.browser)
+        if args.verbose: print 'SRC BROWSER set to [{}]'.format(args.browser)
     else:
         delete_empty_folders = delete_empty_folders_gen
-        print 'SRC BROWSER {}'.format('autodetected')
+        if args.verbose: print 'SRC BROWSER {}'.format('autodetected')
     #
     # ingesting input HTML file
     bm = open(INPUT, 'r').readlines()
     # remove empty lines
-    print [x for x in bm if not x.strip(os.linesep).strip()]
+    if args.verbose: print [x for x in bm if not x.strip(os.linesep).strip()]
     bm = [x for x in bm if x.strip(os.linesep).strip()]
-    print '# of lines in input: {}'.format(len(bm))
+    if args.verbose: print '# of lines in input: {}'.format(len(bm))
     # analysis of URLs
     url_counter = get_url_counter(bm)
     urls_list_input = list(url_counter)
-    print 'INPUT: {} unique URLs'.format(len(urls_list_input))
+    if args.verbose: print 'INPUT: {} unique URLs'.format(len(urls_list_input))
 ##    # to count only multiplicated URLs
 ##    print get_url_counter(bm, duped=True)
     #
@@ -190,7 +194,7 @@ def main(argv):
     #
     # diagnostic list of unique URLs
     urls_list_deduped = list(get_url_counter(bm))
-    print 'DEDUPED: {} unique URLs'.format(len(urls_list_deduped))
+    if args.verbose: print 'DEDUPED: {} unique URLs'.format(len(urls_list_deduped))
     #
     # saving output with deduplicated URLs
     if SAVE_PARTIAL_DEDUP:
@@ -200,11 +204,11 @@ def main(argv):
             fout.writelines(bm)
     #
     # deleting empty bookmark folders
-    bm = delete_empty_folders_gen(bm)
+    bm = delete_empty_folders_gen(bm, verbose=args.verbose)
     #
     # diagnostic list of unique URLs
     urls_list_cleaned = list(get_url_counter(bm))
-    print 'CLEANED: {} unique URLs'.format(len(urls_list_cleaned))
+    if args.verbose: print 'CLEANED: {} unique URLs'.format(len(urls_list_cleaned))
     #
     # saving completely cleaned output
     outfname, ext = os.path.splitext(INPUT)
@@ -217,7 +221,7 @@ def main(argv):
         outfname, ext = os.path.splitext(INPUT)
         outfname = '_'.join([outfname, 'urls']) + '.txt'
         with open(outfname, 'w') as fout:
-            fout.writelines([x + '\n' for x in urls_list_cleaned])
+            fout.writelines([x + '\n' for x in sorted(urls_list_cleaned)])
     #
     # final diagnostics
     assert urls_list_input == urls_list_deduped, \
