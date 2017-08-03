@@ -9,11 +9,11 @@ from collections import Counter
 from itertools import tee, izip
 import argparse
 
-__version__ = "1.9.6"
+__version__ = "1.9.7"
 
 PTRN = r'<DT><A HREF="(.+?://.+?)"'
-EMPTY_LINE = ''
-#EMPTY_LINE = '*****'
+EMPTY_LINE = '\n'
+#EMPTY_LINE = '*****\n'
 
 def get_url_counter(bookmark_file_list, duped=False):
     '''duped - if True, only multiplicated URLs are counted (default=False)'''
@@ -116,7 +116,7 @@ def delete_empty_folders_gen(bookmarks, verbose=False):
                 else:
                     #handle split folder title
                     if re.search(FOLDER_TAIL_PTRN, bookmarks[ix+offset[0]]):
-                        print offset[0], bookmarks[ix+offset[0]]
+                        if verbose: print offset[0], bookmarks[ix+offset[0]]
                         bookmarks[ix+offset[0]] = ''
                         if re.search(FOLDER_HEAD_PTRN, bookmarks[ix+offset[0] - 1]):
                             if verbose: print offset[0] - 1, bookmarks[ix+offset[0] - 1]
@@ -161,7 +161,7 @@ def main(argv):
                         action='store_true',
                         help="produce file with URL list")
     args = parser.parse_args()
-    print 'Arguments:', args
+    if args.verbose:  print 'Arguments:', args
     INPUT = args.infname
 
     if args.browser == 'ch':
