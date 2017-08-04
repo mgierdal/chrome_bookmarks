@@ -4,13 +4,21 @@
 for i in `find . -name "bookmark*html"`
 do
 echo $i
-xurl.sh $i | grep '' -c
-uniqurl.sh $i | grep '' -c
-python bookmarks_xml.py -l $i
-
+#name parsing
 ext="${i##.*}"
 base="${i%.*}"
+#extracting URLs
+allurlfile=$base"_all_urls.txt"
+xurl.sh $i > $allurlfile
+echo "all_extracted:" $(cat $allurlfile | grep '' -c)
+#unique URLs
+uniqurlsfile=$base"_uniq_urls.txt"
+uniqurl.sh $i > $uniqurlsfile
+echo "uniq_urls:" $(cat $uniqurlsfile | grep '' -c)
+
+python bookmarks_xml.py -l $i
+
 urlfile=$base"_urls.txt"
-grep '' $urlfile -c
-cat $urlfile | sort | uniq | grep '' -c
+echo "all_output:" $(grep '' $urlfile -c)
+echo "uniq_output:" $(cat $urlfile | sort | uniq | grep '' -c)
 done
